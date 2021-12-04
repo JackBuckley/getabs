@@ -1,0 +1,24 @@
+{
+    "id": "D9148FF6",
+    "path": "C:/Users/jbuckley/OneDrive - Deloitte (O365D)/Desktop/Modelling and R-code resources/Packages/getabs/R/functions.R",
+    "project_path": "R/functions.R",
+    "type": "r_source",
+    "hash": "842450905",
+    "contents": "",
+    "dirty": false,
+    "created": 1638613771030.0,
+    "source_on_save": false,
+    "relative_order": 1,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "49|79|126|0|\n133|38|314|0|\n335|56|434|0|\n441|63|464|0|\n490|5|552|2|\n",
+    "lastKnownWriteTime": 1638612787,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1638613795905,
+    "read_only": false,
+    "read_only_alternatives": []
+}
