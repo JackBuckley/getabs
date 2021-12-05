@@ -1,5 +1,5 @@
-Package: Get ABS
-Type: Package
-Title: Read data from the ABS data API.
-Version: 0.0.1.0
-RoxygenNote: 7.1.2
+Package: getabs
+Version: 0.1-1
+Title: Read data from the ABS data API
+Authors@R: c(person("Jack", "Developer", role = c("aut", "cre"), email = "buckleyjack4@gmail.com"))
+License: MIT
