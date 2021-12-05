@@ -11,13 +11,15 @@
 if(!require("pacman", character.only = T)) install.packages("pacman")
 
 pacman::p_load(
-  tidyverse,
-  magrittr, 
+  dplyr,
+  tidyr,
+  tibble,
+  stringr,
   janitor,
-  roxygen2,
+  readr,
   httr,
-  XML,
-  xml2
+  xml2,
+  XML
 )
 
 # remove old files
@@ -85,13 +87,13 @@ get_dataflows <- function(search = ".", case_sensitive = FALSE, exact = FALSE){
     
     if(!is.null(attr)){
       
-      attr %<>% 
+      attr <- attr %>% 
         pivot_wider(names_from = name, values_from = value) %>% 
         clean_names()
       
       if(!is.null(attr$id)){
         
-        attr %<>% rename(dataset_id = id)
+        attr <- attr %>% rename(dataset_id = id)
       }
       
     } else {
@@ -108,15 +110,15 @@ get_dataflows <- function(search = ".", case_sensitive = FALSE, exact = FALSE){
     # combine data and add it to the main database
     temp <- tibble(dataset_name = name, description = desc) %>% bind_cols(attr)
     
-    data %<>% bind_rows(temp)
+    data <- data %>% bind_rows(temp)
   }
   
-  data %<>% bind_rows()
+  data <- data %>% bind_rows()
   
-  data %<>% select(dataset_id, dataset_name, description)
+  data <- data %>% select(dataset_id, dataset_name, description)
 
   # filter dataflows so that only dataflows which match the regular expression are returned
-  data %<>% 
+  data <- data %>% 
     filter(
       str_detect(dataset_id, regex(search, ignore_case = !case_sensitive)) |
       str_detect(dataset_name, regex(search, ignore_case = !case_sensitive)) |
@@ -169,7 +171,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(attr$id)) {
       
-      attr %<>% rename(attr_id = id) %>% select(attr_id, position)
+      attr <- attr %>% rename(attr_id = id) %>% select(attr_id, position)
       
     } else {
       
@@ -181,7 +183,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(local$id)) {
       
-      local %<>% rename(local_id = id) %>% select(local_id)
+      local <- local %>% rename(local_id = id) %>% select(local_id)
       
     } else {
       
@@ -192,7 +194,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(concept$id)) {
       
-      concept %<>% rename(concept_id = id) %>% select(concept_id)
+      concept <- concept %>% rename(concept_id = id) %>% select(concept_id)
       
     } else {
       
@@ -202,9 +204,9 @@ get_structure <- function(dataset_id){
     # combine data and add it to the main database
     temp <- bind_cols(attr, local) %>% bind_cols(concept)
     
-    temp %<>% mutate(type = "Dimension")
+    temp <- temp %>% mutate(type = "Dimension")
     
-    data_dim %<>% bind_rows(temp)
+    data_dim <- data_dim %>% bind_rows(temp)
   }
   
   data_attr <- tibble()
@@ -219,7 +221,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(attr$id)) {
       
-      attr %<>% rename(attr_id = id) %>% select(attr_id)
+      attr <- attr %>% rename(attr_id = id) %>% select(attr_id)
       
     } else {
       
@@ -231,7 +233,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(local$id)) {
       
-      local %<>% rename(local_id = id) %>% select(local_id)
+      local <- local %>% rename(local_id = id) %>% select(local_id)
       
     } else {
       
@@ -242,7 +244,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(concept$id)) {
       
-      concept %<>% rename(concept_id = id) %>% select(concept_id)
+      concept <- concept %>% rename(concept_id = id) %>% select(concept_id)
       
     } else {
       
@@ -252,12 +254,12 @@ get_structure <- function(dataset_id){
     # combine data and add it to the main database
     temp <- bind_cols(attr, local) %>% bind_cols(concept)
     
-    temp %<>% mutate(type = "Attribute")
+    temp <- temp %>% mutate(type = "Attribute")
     
-    data_attr %<>% bind_rows(temp)
+    data_attr <- data_attr %>% bind_rows(temp)
   }
   
-  data_attr %<>% distinct()
+  data_attr <- data_attr %>% distinct()
   
   data_measure <- tibble()
   
@@ -271,7 +273,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(attr$id)) {
       
-      attr %<>% rename(attr_id = id) %>% select(attr_id)
+      attr <- attr %>% rename(attr_id = id) %>% select(attr_id)
       
     } else {
       
@@ -283,7 +285,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(local$id)) {
       
-      local %<>% rename(local_id = id) %>% select(local_id)
+      local <- local %>% rename(local_id = id) %>% select(local_id)
       
     } else {
       
@@ -294,7 +296,7 @@ get_structure <- function(dataset_id){
     
     if(!is.null(concept$id)) {
       
-      concept %<>% rename(concept_id = id) %>% select(concept_id)
+      concept <- concept %>% rename(concept_id = id) %>% select(concept_id)
       
     } else {
       
@@ -304,9 +306,9 @@ get_structure <- function(dataset_id){
     # combine data and add it to the main database
     temp <- bind_cols(attr, local) %>% bind_cols(concept)
     
-    temp %<>% mutate(type = "Measure")
+    temp <- temp %>% mutate(type = "Measure")
     
-    data_measure %<>% bind_rows(temp)
+    data_measure <- data_measure %>% bind_rows(temp)
   }
   
   data <- bind_rows(data_dim, data_attr, data_measure)
@@ -374,7 +376,7 @@ get_codelist <- function(dataset_id, values = "levels"){
     # get variable attributes
     var_attr <- temp_codelist$.attrs %>% enframe() 
     
-    var_attr %<>% 
+    var_attr <- var_attr %>% 
       pivot_wider(names_from = name, values_from = value) %>% 
       clean_names() %>% 
       rename(var_id = id) %>% 
@@ -399,37 +401,37 @@ get_codelist <- function(dataset_id, values = "levels"){
       
       temp_data <- tibble(level_name = lvl_name, level_id = lvl_id, var_name = temp_var_name)
       
-      levels %<>% bind_rows(temp_data)
+      levels <- levels %>% bind_rows(temp_data)
     }
     
-    levels %<>% left_join(var_attr, by = "var_name")
+    levels <- levels %>% left_join(var_attr, by = "var_name")
     
-    var_codes %<>% bind_rows(levels)
+    var_codes <- var_codes %>% bind_rows(levels)
   }
   
   if(values == "vars"){
     
-    var_codes %<>% 
+    var_codes <- var_codes %>% 
       distinct(var_id, var_name) %>% 
       mutate(dataset_id = dataset_id)
     
   } else if(values == "levels"){
     
-    var_codes %<>% 
+    var_codes <- var_codes %>% 
       distinct(var_id, var_name, level_id, level_name) %>% 
       mutate(dataset_id = dataset_id)
   }
   
-  var_codes %<>% select(dataset_id, everything())
+  var_codes <- var_codes %>% select(dataset_id, everything())
   
   # add variable types
   structure <- get_structure(dataset_id)
   
-  structure %<>% 
+  structure <- structure %>% 
     mutate(local_id = if_else(is.na(local_id), attr_id, local_id)) %>% 
     select(local_id, type)
   
-  var_codes %<>% left_join(structure, by = c("var_id" = "local_id"))
+  var_codes <- var_codes %>% left_join(structure, by = c("var_id" = "local_id"))
   
   return(var_codes)
 }
@@ -496,19 +498,19 @@ get_data <-
     
     if (!add_labels) {
       
-      data %<>% clean_names()
+      data <- data %>% clean_names()
       
     } else {
       
       # get data structure
       structure <- get_structure(dataset_id)
       
-      structure %<>% 
+      structure <- structure %>% 
         select(attr_id, local_id) %>% 
         mutate(local_id = if_else(is.na(local_id), attr_id, local_id))  
       
       # convert data to long form for ease of updating level names
-      data %<>%
+      data <- data %>%
         mutate(
           across(-c(DATAFLOW), ~ as.character(.)),
           row_id = row_number()
@@ -522,24 +524,24 @@ get_data <-
       # add codes
       codes <- get_codelist(dataset_id, values = "levels")
       
-      codes %<>% left_join(structure, by = c("var_id" = "local_id"))
+      codes <- codes %>% left_join(structure, by = c("var_id" = "local_id"))
       
       # add data variable names back to the codes
-      codes %<>% select(attr_id, level_id, level_name)
+      codes <- codes %>% select(attr_id, level_id, level_name)
       
       # add the codes to the data
-      data %<>% 
+      data <- data %>% 
         left_join(codes, by = c("var" = "attr_id", "value" = "level_id"))
       
       data_val <- data %>% select(DATAFLOW, row_id, var, value)
       data_label <- data %>% select(DATAFLOW, row_id, var, level_name)
       
-      data_val %<>% pivot_wider(names_from = var, values_from = value)
-      data_label %<>% pivot_wider(names_from = var, values_from = level_name)
+      data_val <- data_val %>% pivot_wider(names_from = var, values_from = value)
+      data_label <- data_label %>%pivot_wider(names_from = var, values_from = level_name)
       
-      data_label %<>% select(-any_of(c("OBS_VALUE", "OBS_COMMENT")))
+      data_label <- data_label %>%select(-any_of(c("OBS_VALUE", "OBS_COMMENT")))
       
-      data_label %<>%
+      data_label <- data_label %>%
         clean_names() %>%
         rename_at(vars(-c(dataflow, row_id)), ~ str_c(., "_label"))
       
