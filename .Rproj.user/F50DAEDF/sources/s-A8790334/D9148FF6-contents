@@ -220,7 +220,7 @@ get_structure <- function(dataset_id){
     temp <- data_struc$AttributeList[[i]]
     
     # get the dataset name
-    attr <- temp$.attrs %>% tibble::enframe() %>% dplyr::pivot_wider()
+    attr <- temp$.attrs %>% tibble::enframe() %>% tidyr::pivot_wider()
     
     if(!is.null(attr$id)) {
       
@@ -234,7 +234,7 @@ get_structure <- function(dataset_id){
     # get the components lists
     local <- temp$LocalRepresentation$Enumeration$Ref %>% 
       tibble::enframe() %>% 
-      dplyr::pivot_wider() 
+      tidyr::pivot_wider() 
     
     if(!is.null(local$id)) {
       
@@ -249,7 +249,7 @@ get_structure <- function(dataset_id){
     
     concept <- temp$ConceptIdentity$Ref %>% 
       tibble::enframe() %>% 
-      dplyr::pivot_wider()
+      tidyr::pivot_wider()
     
     if(!is.null(concept$id)) {
       
@@ -280,7 +280,7 @@ get_structure <- function(dataset_id){
     temp <- data_struc$MeasureList[[i]]
     
     # get the dataset name
-    attr <- temp$.attrs %>% tibble::enframe() %>% dplyr::pivot_wider()
+    attr <- temp$.attrs %>% tibble::enframe() %>% tidyr::pivot_wider()
     
     if(!is.null(attr$id)) {
       
@@ -292,7 +292,7 @@ get_structure <- function(dataset_id){
     }
     
     # get the components lists
-    local <- temp$LocalRepresentation$Enumeration$Ref %>% tibble::enframe() %>% dplyr::pivot_wider() 
+    local <- temp$LocalRepresentation$Enumeration$Ref %>% tibble::enframe() %>% tidyr::pivot_wider() 
     
     if(!is.null(local$id)) {
       
@@ -303,7 +303,7 @@ get_structure <- function(dataset_id){
       local <- tibble::tibble(local_id = NA_character_)
     }
     
-    concept <- temp$ConceptIdentity$Ref %>% tibble::enframe() %>% dplyr::pivot_wider()
+    concept <- temp$ConceptIdentity$Ref %>% tibble::enframe() %>% tidyr::pivot_wider()
     
     if(!is.null(concept$id)) {
       
@@ -393,7 +393,7 @@ get_codelist <- function(dataset_id, values = "levels"){
     var_attr <- temp_codelist$.attrs %>% tibble::enframe() 
     
     var_attr <- var_attr %>% 
-      dplyr::pivot_wider(names_from = name, values_from = value) %>% 
+      tidyr::pivot_wider(names_from = name, values_from = value) %>% 
       janitor::clean_names() %>% 
       dplyr::rename(var_id = id) %>% 
       dplyr::mutate(var_name = temp_var_name)
@@ -531,7 +531,7 @@ get_data <-
           dplyr::across(-c(DATAFLOW), ~ as.character(.)),
           row_id = dplyr::row_number()
         ) %>%
-        dplyr::pivot_longer(
+        tidyr::pivot_longer(
           cols = -c(DATAFLOW, row_id),
           names_to = "var",
           values_to = "value"
@@ -552,10 +552,10 @@ get_data <-
       data_val <- data %>% dplyr::select(DATAFLOW, row_id, var, value)
       data_label <- data %>% dplyr::select(DATAFLOW, row_id, var, level_name)
       
-      data_val <- data_val %>% dplyr::pivot_wider(names_from = var, values_from = value)
-      data_label <- data_label %>%dplyr::pivot_wider(names_from = var, values_from = level_name)
+      data_val <- data_val %>% tidyr::pivot_wider(names_from = var, values_from = value)
+      data_label <- data_label %>% tidyr::pivot_wider(names_from = var, values_from = level_name)
       
-      data_label <- data_label %>%dplyr::select(-dplyr::any_of(c("OBS_VALUE", "OBS_COMMENT")))
+      data_label <- data_label %>% dplyr::select(-dplyr::any_of(c("OBS_VALUE", "OBS_COMMENT")))
       
       data_label <- data_label %>%
         janitor::clean_names() %>%
