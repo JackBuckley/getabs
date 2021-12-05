@@ -1,0 +1,5 @@
+Package: Get ABS
+Type: Package
+Title: Read data from the ABS data API.
+Version: 0.0.1.0
+RoxygenNote: 7.1.2

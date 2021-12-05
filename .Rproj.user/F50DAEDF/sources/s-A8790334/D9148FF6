@@ -3,7 +3,7 @@
     "path": "C:/Users/jbuckley/OneDrive - Deloitte (O365D)/Desktop/Modelling and R-code resources/Packages/getabs/R/functions.R",
     "project_path": "R/functions.R",
     "type": "r_source",
-    "hash": "842450905",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1638613771030.0,
@@ -11,7 +11,9 @@
     "relative_order": 1,
     "properties": {
         "source_window_id": "",
-        "Source": "Source"
+        "Source": "Source",
+        "cursorPosition": "25,0",
+        "scrollLine": "0"
     },
     "folds": "49|79|126|0|\n133|38|314|0|\n335|56|434|0|\n441|63|464|0|\n490|5|552|2|\n",
     "lastKnownWriteTime": 1638612787,
