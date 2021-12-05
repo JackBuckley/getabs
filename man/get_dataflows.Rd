@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.R
 \name{get_dataflows}
 \alias{get_dataflows}
-\title{Get Dataflows}
+\title{importFrom magrittr "%>%"}
 \usage{
 get_dataflows(search = ".", case_sensitive = FALSE, exact = FALSE)
 }
@@ -17,7 +17,7 @@ get_dataflows(search = ".", case_sensitive = FALSE, exact = FALSE)
 A tibble containing information on the matched dataflows, including their dataset_id, name and description.
 }
 \description{
-Returns dataflows currently available from the ABS data API which match the supplied search term.
+importFrom magrittr "%>%"
 }
 \examples{
 # Return all available dataflows

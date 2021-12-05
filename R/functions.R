@@ -7,24 +7,22 @@
 #
 # -------------------------------------------------------------------------
 
-# load and install required packages
 if(!require("pacman", character.only = T)) install.packages("pacman")
 
 pacman::p_load(
-  dplyr,
-  tidyr,
-  tibble,
-  stringr,
-  janitor,
-  readr,
-  httr,
+  tidyverse,
   xml2,
-  XML
+  XML,
+  httr,
+  magrittr, 
+  janitor,
+  roxygen2
 )
 
 # remove old files
 rm(list=ls())
 gc()
+
 
 
 # Get the list of all ABS dataflows -----------------------------------
@@ -55,17 +53,17 @@ get_dataflows <- function(search = ".", case_sensitive = FALSE, exact = FALSE){
   # note - requires saving a temp file in the current working directory
   dataflow_url <- "https://api.data.abs.gov.au/dataflow"
   
-  download_xml(url = dataflow_url, file = "temp.curltmp")
+  xml2::download_xml(url = dataflow_url, file = "temp.curltmp")
   
-  dataflows <- read_xml("temp.curltmp")
+  dataflows <- xml2::read_xml("temp.curltmp")
   
   file.remove("temp.curltmp")
   
-  dataflows <- xmlParse(dataflows) %>% xmlToList()
+  dataflows <- XML::xmlParse(dataflows) %>% XML::xmlToList()
   
   num_dataflows <- length(dataflows$Structures$Dataflows)
   
-  data <- tibble()
+  data <- tibble::tibble()
   
   for (i in 1:num_dataflows){
     
@@ -83,23 +81,23 @@ get_dataflows <- function(search = ".", case_sensitive = FALSE, exact = FALSE){
     if(is.null(desc)) desc <- NA_character_
     
     # get variable attributes and check that they exist
-    attr <- temp$.attrs %>% enframe() 
+    attr <- temp$.attrs %>% tibble::enframe() 
     
     if(!is.null(attr)){
       
       attr <- attr %>% 
-        pivot_wider(names_from = name, values_from = value) %>% 
-        clean_names()
+        tidyr::pivot_wider(names_from = name, values_from = value) %>% 
+        janitor::clean_names()
       
       if(!is.null(attr$id)){
         
-        attr <- attr %>% rename(dataset_id = id)
+        attr <- attr %>% dplyr::rename(dataset_id = id)
       }
       
     } else {
       
       attr <-
-        tibble(
+        tibble::tibble(
           dataset_id = NA_character_,
           agency_id = NA_character_,
           version = NA_character_,
@@ -108,21 +106,22 @@ get_dataflows <- function(search = ".", case_sensitive = FALSE, exact = FALSE){
     }
     
     # combine data and add it to the main database
-    temp <- tibble(dataset_name = name, description = desc) %>% bind_cols(attr)
+    temp <- tibble::tibble(dataset_name = name, description = desc) %>% 
+      dplyr::bind_cols(attr)
     
-    data <- data %>% bind_rows(temp)
+    data <- data %>% dplyr::bind_rows(temp)
   }
   
-  data <- data %>% bind_rows()
+  data <- data %>% dplyr::bind_rows()
   
-  data <- data %>% select(dataset_id, dataset_name, description)
+  data <- data %>% dplyr::select(dataset_id, dataset_name, description)
 
   # filter dataflows so that only dataflows which match the regular expression are returned
   data <- data %>% 
-    filter(
-      str_detect(dataset_id, regex(search, ignore_case = !case_sensitive)) |
-      str_detect(dataset_name, regex(search, ignore_case = !case_sensitive)) |
-      str_detect(description, regex(search, ignore_case = !case_sensitive))
+    dplyr::filter(
+      stringr::str_detect(dataset_id, stringr::regex(search, ignore_case = !case_sensitive)) |
+      stringr::str_detect(dataset_name, stringr::regex(search, ignore_case = !case_sensitive)) |
+      stringr::str_detect(description, stringr::regex(search, ignore_case = !case_sensitive))
     )
   
   return(data)
@@ -136,18 +135,18 @@ get_dataflows <- function(search = ".", case_sensitive = FALSE, exact = FALSE){
 get_structure <- function(dataset_id){
   
   temp_url <- 
-    str_c(
+    stringr::str_c(
       "https://api.data.abs.gov.au/datastructure/ABS/", 
       dataset_id, 
       "?references=children")
   
-  download_xml(url = temp_url, file = "temp.curltmp")
+  xml2::download_xml(url = temp_url, file = "temp.curltmp")
   
-  data_struc <- read_xml("temp.curltmp")
+  data_struc <- xml2::read_xml("temp.curltmp")
   
   file.remove("temp.curltmp")
   
-  data_struc <- xmlParse(data_struc) %>% xmlToList()
+  data_struc <- XML::xmlParse(data_struc) %>% XML::xmlToList()
   
   data_struc <- 
     data_struc$Structures$DataStructures$DataStructure$DataStructureComponents
@@ -159,7 +158,7 @@ get_structure <- function(dataset_id){
   
   num_measures <- length(data_struc[["MeasureList"]]) - 1
   
-  data_dim <- tibble()
+  data_dim <- tibble::tibble()
   
   for (i in 1:num_dimensions){
     
@@ -167,49 +166,53 @@ get_structure <- function(dataset_id){
     temp <- data_struc$DimensionList[[i]]
     
     # get the dataset name
-    attr <- temp$.attrs %>% enframe() %>% pivot_wider()
+    attr <- temp$.attrs %>% tibble::enframe() %>% tidyr::pivot_wider()
     
     if(!is.null(attr$id)) {
       
-      attr <- attr %>% rename(attr_id = id) %>% select(attr_id, position)
+      attr <- attr %>% dplyr::rename(attr_id = id) %>% dplyr::select(attr_id, position)
       
     } else {
       
-      attr <- tibble(attr_id = NA_character_, position = NA_real_)
+      attr <- tibble::tibble(attr_id = NA_character_, position = NA_real_)
     }
     
     # get the components lists
-    local <- temp$LocalRepresentation$Enumeration$Ref %>% enframe() %>% pivot_wider() 
+    local <- temp$LocalRepresentation$Enumeration$Ref %>% 
+      tibble::enframe() %>% 
+      tidyr::pivot_wider()
     
     if(!is.null(local$id)) {
       
-      local <- local %>% rename(local_id = id) %>% select(local_id)
+      local <- local %>% dplyr::rename(local_id = id) %>% dplyr::select(local_id)
       
     } else {
       
-      local <- tibble(local_id = NA_character_)
+      local <- tibble::tibble(local_id = NA_character_)
     }
     
-    concept <- temp$ConceptIdentity$Ref %>% enframe() %>% pivot_wider()
+    concept <- temp$ConceptIdentity$Ref %>% 
+      tibble::enframe() %>% 
+      tidyr::pivot_wider()
     
     if(!is.null(concept$id)) {
       
-      concept <- concept %>% rename(concept_id = id) %>% select(concept_id)
+      concept <- concept %>% dplyr::rename(concept_id = id) %>% dplyr::select(concept_id)
       
     } else {
       
-      concept <- tibble(concept_id = NA_character_)
+      concept <- tibble::tibble(concept_id = NA_character_)
     }
     
     # combine data and add it to the main database
-    temp <- bind_cols(attr, local) %>% bind_cols(concept)
+    temp <- dplyr::bind_cols(attr, local) %>% dplyr::bind_cols(concept)
     
-    temp <- temp %>% mutate(type = "Dimension")
+    temp <- temp %>% dplyr::mutate(type = "Dimension")
     
-    data_dim <- data_dim %>% bind_rows(temp)
+    data_dim <- data_dim %>% dplyr::bind_rows(temp)
   }
   
-  data_attr <- tibble()
+  data_attr <- tibble::tibble()
   
   for (i in 1:num_attr){
     
@@ -217,51 +220,59 @@ get_structure <- function(dataset_id){
     temp <- data_struc$AttributeList[[i]]
     
     # get the dataset name
-    attr <- temp$.attrs %>% enframe() %>% pivot_wider()
+    attr <- temp$.attrs %>% tibble::enframe() %>% dplyr::pivot_wider()
     
     if(!is.null(attr$id)) {
       
-      attr <- attr %>% rename(attr_id = id) %>% select(attr_id)
+      attr <- attr %>% dplyr::rename(attr_id = id) %>% dplyr::select(attr_id)
       
     } else {
       
-      attr <- tibble(attr_id = NA_character_)
+      attr <- tibble::tibble(attr_id = NA_character_)
     }
     
     # get the components lists
-    local <- temp$LocalRepresentation$Enumeration$Ref %>% enframe() %>% pivot_wider() 
+    local <- temp$LocalRepresentation$Enumeration$Ref %>% 
+      tibble::enframe() %>% 
+      dplyr::pivot_wider() 
     
     if(!is.null(local$id)) {
       
-      local <- local %>% rename(local_id = id) %>% select(local_id)
+      local <- local %>% 
+        dplyr::rename(local_id = id) %>% 
+        dplyr::select(local_id)
       
     } else {
       
-      local <- tibble(local_id = NA_character_)
+      local <- tibble::tibble(local_id = NA_character_)
     }
     
-    concept <- temp$ConceptIdentity$Ref %>% enframe() %>% pivot_wider()
+    concept <- temp$ConceptIdentity$Ref %>% 
+      tibble::enframe() %>% 
+      dplyr::pivot_wider()
     
     if(!is.null(concept$id)) {
       
-      concept <- concept %>% rename(concept_id = id) %>% select(concept_id)
+      concept <- concept %>% 
+        dplyr::rename(concept_id = id) %>% 
+        dplyr::select(concept_id)
       
     } else {
       
-      concept <- tibble(concept_id = NA_character_)
+      concept <- tibble::tibble(concept_id = NA_character_)
     }
     
     # combine data and add it to the main database
-    temp <- bind_cols(attr, local) %>% bind_cols(concept)
+    temp <- dplyr::bind_cols(attr, local) %>% dplyr::bind_cols(concept)
     
-    temp <- temp %>% mutate(type = "Attribute")
+    temp <- temp %>% dplyr::mutate(type = "Attribute")
     
-    data_attr <- data_attr %>% bind_rows(temp)
+    data_attr <- data_attr %>% dplyr::bind_rows(temp)
   }
   
-  data_attr <- data_attr %>% distinct()
+  data_attr <- data_attr %>% dplyr::distinct()
   
-  data_measure <- tibble()
+  data_measure <- tibble::tibble()
   
   for (i in 1:num_measures){
     
@@ -269,49 +280,49 @@ get_structure <- function(dataset_id){
     temp <- data_struc$MeasureList[[i]]
     
     # get the dataset name
-    attr <- temp$.attrs %>% enframe() %>% pivot_wider()
+    attr <- temp$.attrs %>% tibble::enframe() %>% dplyr::pivot_wider()
     
     if(!is.null(attr$id)) {
       
-      attr <- attr %>% rename(attr_id = id) %>% select(attr_id)
+      attr <- attr %>% dplyr::rename(attr_id = id) %>% dplyr::select(attr_id)
       
     } else {
       
-      attr <- tibble(attr_id = NA_character_)
+      attr <- tibble::tibble(attr_id = NA_character_)
     }
     
     # get the components lists
-    local <- temp$LocalRepresentation$Enumeration$Ref %>% enframe() %>% pivot_wider() 
+    local <- temp$LocalRepresentation$Enumeration$Ref %>% tibble::enframe() %>% dplyr::pivot_wider() 
     
     if(!is.null(local$id)) {
       
-      local <- local %>% rename(local_id = id) %>% select(local_id)
+      local <- local %>% dplyr::rename(local_id = id) %>% dplyr::select(local_id)
       
     } else {
       
-      local <- tibble(local_id = NA_character_)
+      local <- tibble::tibble(local_id = NA_character_)
     }
     
-    concept <- temp$ConceptIdentity$Ref %>% enframe() %>% pivot_wider()
+    concept <- temp$ConceptIdentity$Ref %>% tibble::enframe() %>% dplyr::pivot_wider()
     
     if(!is.null(concept$id)) {
       
-      concept <- concept %>% rename(concept_id = id) %>% select(concept_id)
+      concept <- concept %>% dplyr::rename(concept_id = id) %>% dplyr::select(concept_id)
       
     } else {
       
-      concept <- tibble(concept_id = NA_character_)
+      concept <- tibble::tibble(concept_id = NA_character_)
     }
     
     # combine data and add it to the main database
-    temp <- bind_cols(attr, local) %>% bind_cols(concept)
+    temp <- dplyr::bind_cols(attr, local) %>% dplyr::bind_cols(concept)
     
-    temp <- temp %>% mutate(type = "Measure")
+    temp <- temp %>% dplyr::mutate(type = "Measure")
     
-    data_measure <- data_measure %>% bind_rows(temp)
+    data_measure <- data_measure %>% dplyr::bind_rows(temp)
   }
   
-  data <- bind_rows(data_dim, data_attr, data_measure)
+  data <- dplyr::bind_rows(data_dim, data_attr, data_measure)
   
   return(data)
 }
@@ -341,21 +352,26 @@ get_codelist <- function(dataset_id, values = "levels"){
   # if(is.null(dataset_id))
   
   # download the codelist XML file
-  codelist_url <- str_c("https://api.data.abs.gov.au/datastructure/ABS/", dataset_id, "?references=codelist")
+  codelist_url <-
+    stringr::str_c(
+      "https://api.data.abs.gov.au/datastructure/ABS/",
+      dataset_id,
+      "?references=codelist"
+    )
   
-  download_xml(url = codelist_url, file = "temp.curltmp")
+  xml2::download_xml(url = codelist_url, file = "temp.curltmp")
   
-  data_struc <- read_xml("temp.curltmp")
+  data_struc <- xml2::read_xml("temp.curltmp")
   
   file.remove("temp.curltmp")
   
-  codelist <- xmlParse(data_struc) %>% xmlToList()
+  codelist <- XML::xmlParse(data_struc) %>% XML::xmlToList()
   
   # read in the number of codelists (variables) we have
   num_codelist <- length(codelist$Structures$Codelists)
   
   var_codes <-
-    tibble(
+    tibble::tibble(
       var_id = character(),
       var_name = character(),
       level_id = character(),
@@ -374,19 +390,19 @@ get_codelist <- function(dataset_id, values = "levels"){
     temp_var_name <- temp_codelist$Name$text
     
     # get variable attributes
-    var_attr <- temp_codelist$.attrs %>% enframe() 
+    var_attr <- temp_codelist$.attrs %>% tibble::enframe() 
     
     var_attr <- var_attr %>% 
-      pivot_wider(names_from = name, values_from = value) %>% 
-      clean_names() %>% 
-      rename(var_id = id) %>% 
-      mutate(var_name = temp_var_name)
+      dplyr::pivot_wider(names_from = name, values_from = value) %>% 
+      janitor::clean_names() %>% 
+      dplyr::rename(var_id = id) %>% 
+      dplyr::mutate(var_name = temp_var_name)
     
     # get the number of levels for the variable
     num_codes <- length(temp_codelist) - 2
     
     levels <-
-      tibble(var_name = character(),
+      tibble::tibble(var_name = character(),
              level_name = character(),
              level_id = character())
     
@@ -399,39 +415,39 @@ get_codelist <- function(dataset_id, values = "levels"){
       
       lvl_id <- temp_code$.attrs
       
-      temp_data <- tibble(level_name = lvl_name, level_id = lvl_id, var_name = temp_var_name)
+      temp_data <- tibble::tibble(level_name = lvl_name, level_id = lvl_id, var_name = temp_var_name)
       
-      levels <- levels %>% bind_rows(temp_data)
+      levels <- levels %>% dplyr::bind_rows(temp_data)
     }
     
-    levels <- levels %>% left_join(var_attr, by = "var_name")
+    levels <- levels %>% dplyr::left_join(var_attr, by = "var_name")
     
-    var_codes <- var_codes %>% bind_rows(levels)
+    var_codes <- var_codes %>% dplyr::bind_rows(levels)
   }
   
   if(values == "vars"){
     
     var_codes <- var_codes %>% 
-      distinct(var_id, var_name) %>% 
-      mutate(dataset_id = dataset_id)
+      dplyr::distinct(var_id, var_name) %>% 
+      dplyr::mutate(dataset_id = dataset_id)
     
   } else if(values == "levels"){
     
     var_codes <- var_codes %>% 
-      distinct(var_id, var_name, level_id, level_name) %>% 
-      mutate(dataset_id = dataset_id)
+      dplyr::distinct(var_id, var_name, level_id, level_name) %>% 
+      dplyr::mutate(dataset_id = dataset_id)
   }
   
-  var_codes <- var_codes %>% select(dataset_id, everything())
+  var_codes <- var_codes %>% dplyr::select(dataset_id, dplyr::everything())
   
   # add variable types
   structure <- get_structure(dataset_id)
   
   structure <- structure %>% 
-    mutate(local_id = if_else(is.na(local_id), attr_id, local_id)) %>% 
-    select(local_id, type)
+    dplyr::mutate(local_id = dplyr::if_else(is.na(local_id), attr_id, local_id)) %>% 
+    dplyr::select(local_id, type)
   
-  var_codes <- var_codes %>% left_join(structure, by = c("var_id" = "local_id"))
+  var_codes <- var_codes %>% dplyr::left_join(structure, by = c("var_id" = "local_id"))
   
   return(var_codes)
 }
@@ -444,7 +460,7 @@ get_codelist <- function(dataset_id, values = "levels"){
 get_url <- function(dataset_id, start_date, end_date, filters){
   
   data_url <-
-    str_c("https://api.data.abs.gov.au/data/",
+    stringr::str_c("https://api.data.abs.gov.au/data/",
           dataset_id,
           "/?format=csv")
   
@@ -492,13 +508,13 @@ get_data <-
     filters = NULL
   ) {
     
-    data <- GET(url = get_url(dataset_id, start_date, end_date, filters))
+    data <- httr::GET(url = get_url(dataset_id, start_date, end_date, filters))
     
-    data <- read_csv(content(data))
+    data <- readr::read_csv(httr::content(data))
     
     if (!add_labels) {
       
-      data <- data %>% clean_names()
+      data <- data %>% janitor::clean_names()
       
     } else {
       
@@ -506,16 +522,16 @@ get_data <-
       structure <- get_structure(dataset_id)
       
       structure <- structure %>% 
-        select(attr_id, local_id) %>% 
-        mutate(local_id = if_else(is.na(local_id), attr_id, local_id))  
+        dplyr::select(attr_id, local_id) %>% 
+        dplyr::mutate(local_id = dplyr::if_else(is.na(local_id), attr_id, local_id))  
       
       # convert data to long form for ease of updating level names
       data <- data %>%
-        mutate(
-          across(-c(DATAFLOW), ~ as.character(.)),
-          row_id = row_number()
+        dplyr::mutate(
+          dplyr::across(-c(DATAFLOW), ~ as.character(.)),
+          row_id = dplyr::row_number()
         ) %>%
-        pivot_longer(
+        dplyr::pivot_longer(
           cols = -c(DATAFLOW, row_id),
           names_to = "var",
           values_to = "value"
@@ -524,31 +540,31 @@ get_data <-
       # add codes
       codes <- get_codelist(dataset_id, values = "levels")
       
-      codes <- codes %>% left_join(structure, by = c("var_id" = "local_id"))
+      codes <- codes %>% dplyr::left_join(structure, by = c("var_id" = "local_id"))
       
       # add data variable names back to the codes
-      codes <- codes %>% select(attr_id, level_id, level_name)
+      codes <- codes %>% dplyr::select(attr_id, level_id, level_name)
       
       # add the codes to the data
       data <- data %>% 
-        left_join(codes, by = c("var" = "attr_id", "value" = "level_id"))
+        dplyr::left_join(codes, by = c("var" = "attr_id", "value" = "level_id"))
       
-      data_val <- data %>% select(DATAFLOW, row_id, var, value)
-      data_label <- data %>% select(DATAFLOW, row_id, var, level_name)
+      data_val <- data %>% dplyr::select(DATAFLOW, row_id, var, value)
+      data_label <- data %>% dplyr::select(DATAFLOW, row_id, var, level_name)
       
-      data_val <- data_val %>% pivot_wider(names_from = var, values_from = value)
-      data_label <- data_label %>%pivot_wider(names_from = var, values_from = level_name)
+      data_val <- data_val %>% dplyr::pivot_wider(names_from = var, values_from = value)
+      data_label <- data_label %>%dplyr::pivot_wider(names_from = var, values_from = level_name)
       
-      data_label <- data_label %>%select(-any_of(c("OBS_VALUE", "OBS_COMMENT")))
+      data_label <- data_label %>%dplyr::select(-dplyr::any_of(c("OBS_VALUE", "OBS_COMMENT")))
       
       data_label <- data_label %>%
-        clean_names() %>%
-        rename_at(vars(-c(dataflow, row_id)), ~ str_c(., "_label"))
+        janitor::clean_names() %>%
+        dplyr::rename_at(dplyr::vars(-c(dataflow, row_id)), ~ stringr::str_c(., "_label"))
       
       data <- data_val %>%
-        clean_names() %>%
-        left_join(data_label, by = c("dataflow", "row_id")) %>%
-        select(-row_id)
+        janitor::clean_names() %>%
+        dplyr::left_join(data_label, by = c("dataflow", "row_id")) %>%
+        dplyr::select(-row_id)
     }
     
     return(data)

@@ -4,3 +4,6 @@ Title: Read data from the ABS data API
 Authors@R: c(person("Jack", "Developer", role = c("aut", "cre"), email = "buckleyjack4@gmail.com"))
 Depends: R (>= 3.1.0), dplyr, tidyr, readr, stringr, tibble, janitor, httr, xml2, XML
 License: MIT
+RoxygenNote: 7.1.2
+Imports: 
+    magrittr
