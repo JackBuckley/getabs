@@ -6,9 +6,9 @@
 \usage{
 get_data(
   dataset_id,
+  level_type = "both",
   start_date = NA_real_,
   end_date = NA_real_,
-  add_labels = TRUE,
   filters = NULL
 )
 }
@@ -16,11 +16,11 @@ get_data(
 \item{dataset_id}{The dataset ID of the dataflow you wish to get a codelist for. 
 Dataset IDs can be found using get_dataflows().}
 
+\item{level_type}{Select variable level return type from "codes", "levels" or "both". Default is "both".}
+
 \item{start_date}{Optional parameter, refines the search to only include data after the provided start date (to be implemented).}
 
 \item{end_date}{Optional parameter, refines the search to only include data before the provided end date (to be implemented).}
-
-\item{add_labels}{Should additional variable level label columns be included in the output. Default is TRUE.}
 
 \item{filters}{Additional filter for other dimensions of the data (to be implemented).}
 }

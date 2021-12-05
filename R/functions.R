@@ -486,10 +486,10 @@ get_url <- function(dataset_id, start_date, end_date, filters){
 #'
 #' Returns the dataset for the selected dataflow.
 #' @param dataset_id The dataset ID of the dataflow you wish to get a codelist for. 
-#' Dataset IDs can be found using get_dataflows(). 
+#' Dataset IDs can be found using get_dataflows().
+#' @param level_type Select variable level return type from "codes", "levels" or "both". Default is "both".
 #' @param start_date Optional parameter, refines the search to only include data after the provided start date (to be implemented).
 #' @param end_date Optional parameter, refines the search to only include data before the provided end date (to be implemented).
-#' @param add_labels Should additional variable level label columns be included in the output. Default is TRUE.
 #' @param filters Additional filter for other dimensions of the data (to be implemented).
 #' @return A tibble with the data from the dataset. 
 #' @examples 
@@ -502,9 +502,9 @@ get_url <- function(dataset_id, start_date, end_date, filters){
 get_data <-
   function(
     dataset_id,
+    level_type = "both",
     start_date = NA_real_,
     end_date = NA_real_,
-    add_labels = TRUE,
     filters = NULL
   ) {
     
@@ -512,7 +512,7 @@ get_data <-
     
     data <- readr::read_csv(httr::content(data))
     
-    if (!add_labels) {
+    if (level_type == "codes") {
       
       data <- data %>% janitor::clean_names()
       
@@ -549,25 +549,41 @@ get_data <-
       data <- data %>% 
         dplyr::left_join(codes, by = c("var" = "attr_id", "value" = "level_id"))
       
-      data_val <- data %>% dplyr::select(DATAFLOW, row_id, var, value)
-      data_label <- data %>% dplyr::select(DATAFLOW, row_id, var, level_name)
-      
-      data_val <- data_val %>% tidyr::pivot_wider(names_from = var, values_from = value)
-      data_label <- data_label %>% tidyr::pivot_wider(names_from = var, values_from = level_name)
-      
-      data_label <- data_label %>% dplyr::select(-dplyr::any_of(c("OBS_VALUE", "OBS_COMMENT")))
-      
-      data_label <- data_label %>%
-        janitor::clean_names() %>%
-        dplyr::rename_at(dplyr::vars(-c(dataflow, row_id)), ~ stringr::str_c(., "_label"))
-      
-      data <- data_val %>%
-        janitor::clean_names() %>%
-        dplyr::left_join(data_label, by = c("dataflow", "row_id")) %>%
-        dplyr::select(-row_id)
+
+      if (level_type == "levels"){
+        
+        data <- data %>% 
+          dplyr::mutate(level_name = if_else(is.na(level_name), value, level_name)) %>% 
+          dplyr::select(-value)
+        
+        data <- data %>% tidyr::pivot_wider(names_from = var, values_from = level_name)
+        
+        data <- data %>% dplyr::select(-row_id) %>% janitor::clean_names()
+        
+      } else if (level_type == "both") {
+        
+        data_val <- data %>% dplyr::select(DATAFLOW, row_id, var, value)
+        data_label <- data %>% dplyr::select(DATAFLOW, row_id, var, level_name)
+        
+        data_val <- data_val %>% tidyr::pivot_wider(names_from = var, values_from = value)
+        data_label <- data_label %>% tidyr::pivot_wider(names_from = var, values_from = level_name)
+        
+        data_label <- data_label %>% dplyr::select(-dplyr::any_of(c("OBS_VALUE", "OBS_COMMENT")))
+        
+        data_label <- data_label %>%
+          janitor::clean_names() %>%
+          dplyr::rename_at(dplyr::vars(-c(dataflow, row_id)), ~ stringr::str_c(., "_label"))
+        
+        data <- data_val %>%
+          janitor::clean_names() %>%
+          dplyr::left_join(data_label, by = c("dataflow", "row_id")) %>%
+          dplyr::select(-row_id)
+        
+      } else {
+        
+        stop("level_type must be one of 'codes', 'levels' or 'both'. Use ?get_codelist for more information.")
+      }
     }
     
     return(data)
   }
-
-
