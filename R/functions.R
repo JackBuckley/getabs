@@ -398,8 +398,10 @@ get_codelist <- function(dataset_id, values = "levels"){
       dplyr::rename(var_id = id) %>% 
       dplyr::mutate(var_name = temp_var_name)
     
-    # get the number of levels for the variable
-    num_codes <- length(temp_codelist) - 2
+    # get the number of levels for the variable, only keep Code elements
+    temp_codelist <- temp_codelist[names(temp_codelist) == "Code"]
+    
+    num_codes <- length(temp_codelist)
     
     levels <-
       tibble::tibble(var_name = character(),
@@ -409,7 +411,7 @@ get_codelist <- function(dataset_id, values = "levels"){
     # get the codes for each variable level
     for(j in 1:num_codes){
       
-      temp_code <- temp_codelist[[j + 1]]
+      temp_code <- temp_codelist[[j]]
       
       lvl_name <- temp_code$Name$text
       
