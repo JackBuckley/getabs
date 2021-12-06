@@ -344,7 +344,7 @@ get_structure <- function(dataset_id){
 #' codes <- get_codelist(dataset_id = "ALC");
 #' 
 #' # Only retrieve variable names
-#' var_codes <- get_codelist(values = "vars");
+#' var_codes <- get_codelist(dataset_id = "ALC", values = "vars");
 #' @export
 get_codelist <- function(dataset_id, values = "levels"){
   
@@ -487,17 +487,17 @@ get_url <- function(dataset_id, start_date, end_date, filters){
 #' Returns the dataset for the selected dataflow.
 #' @param dataset_id The dataset ID of the dataflow you wish to get a codelist for. 
 #' Dataset IDs can be found using get_dataflows().
-#' @param level_type Select variable level return type from "codes", "levels" or "both". Default is "both".
+#' @param level_type Select variable level return type from "codes", "labels" or "both". Default is "both".
 #' @param start_date Optional parameter, refines the search to only include data after the provided start date (to be implemented).
 #' @param end_date Optional parameter, refines the search to only include data before the provided end date (to be implemented).
 #' @param filters Additional filter for other dimensions of the data (to be implemented).
 #' @return A tibble with the data from the dataset. 
 #' @examples 
-#' # Return the Codelist for the Apparent Consumption of Alcohol dataflow (dataset_id = "ALC")
-#' codes <- get_codelist(dataset_id = "ALC");
+#' # Return the dataset for the Apparent Consumption of Alcohol dataflow (dataset_id = "ALC")
+#' data <- get_data(dataset_id = "ALC");
 #' 
-#' # Only retrieve variable names
-#' var_codes <- get_codelist(values = "vars");
+#' # Include only variable names
+#' data_labelled <- get_data(dataset_id = "ALC", level_type = "labels");
 #' @export
 get_data <-
   function(
@@ -550,7 +550,7 @@ get_data <-
         dplyr::left_join(codes, by = c("var" = "attr_id", "value" = "level_id"))
       
 
-      if (level_type == "levels"){
+      if (level_type == "labels"){
         
         data <- data %>% 
           dplyr::mutate(level_name = if_else(is.na(level_name), value, level_name)) %>% 

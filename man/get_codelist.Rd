@@ -24,5 +24,5 @@ Returns the codelist of variables and variable levels for the selected dataflow.
 codes <- get_codelist(dataset_id = "ALC");
 
 # Only retrieve variable names
-var_codes <- get_codelist(values = "vars");
+var_codes <- get_codelist(dataset_id = "ALC", values = "vars");
 }

@@ -16,7 +16,7 @@ get_data(
 \item{dataset_id}{The dataset ID of the dataflow you wish to get a codelist for. 
 Dataset IDs can be found using get_dataflows().}
 
-\item{level_type}{Select variable level return type from "codes", "levels" or "both". Default is "both".}
+\item{level_type}{Select variable level return type from "codes", "labels" or "both". Default is "both".}
 
 \item{start_date}{Optional parameter, refines the search to only include data after the provided start date (to be implemented).}
 
@@ -31,9 +31,9 @@ A tibble with the data from the dataset.
 Returns the dataset for the selected dataflow.
 }
 \examples{
-# Return the Codelist for the Apparent Consumption of Alcohol dataflow (dataset_id = "ALC")
-codes <- get_codelist(dataset_id = "ALC");
+# Return the dataset for the Apparent Consumption of Alcohol dataflow (dataset_id = "ALC")
+data <- get_data(dataset_id = "ALC");
 
-# Only retrieve variable names
-var_codes <- get_codelist(values = "vars");
+# Include only variable names
+data_labelled <- get_data(dataset_id = "ALC", level_type = "labels");
 }
