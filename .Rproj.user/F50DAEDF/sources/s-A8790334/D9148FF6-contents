@@ -512,6 +512,11 @@ get_data <-
     
     data <- httr::GET(url = get_url(dataset_id, start_date, end_date, filters))
     
+    if(data$status_code == 500){
+      
+      stop("Internal ABS server error") 
+    }
+    
     data <- readr::read_csv(httr::content(data))
     
     if (level_type == "codes") {
@@ -589,3 +594,4 @@ get_data <-
     
     return(data)
   }
+
