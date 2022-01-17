@@ -359,6 +359,8 @@ get_codelist <- function(dataset_id, values = "levels"){
       "?references=codelist"
     )
   
+  test_var <- 1
+  
   xml2::download_xml(url = codelist_url, file = "temp.curltmp")
   
   data_struc <- xml2::read_xml("temp.curltmp")
