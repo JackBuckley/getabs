@@ -463,25 +463,71 @@ get_codelist <- function(dataset_id, values = "levels"){
 # helper function to returns a valid ABS data API request url
 get_url <- function(dataset_id, start_date, end_date, filters){
   
-  data_url <-
-    stringr::str_c("https://api.data.abs.gov.au/data/",
-          dataset_id,
-          "/?format=csv")
+  # get the data structure to correctly order filters
+  if(!is.null(filters)){
+    
+    # get the data structure to determine the ordering of the filters
+    structure <- get_structure(dataset_id)
+    
+    # only keep non time dimensions 
+    structure %<>% 
+      drop_na(position, local_id) %>% 
+      select(position, local_id) %>% 
+      arrange(position)
+    
+    # initialise the vector of filters
+    filter <- ""
+    
+    # for each dimension add the filter
+    for(j in seq_along(structure$local_id)){
+      
+      id <- structure$local_id[j]
+      
+      selection <- filters[[id]]
+      
+      # if id not included in filters, add an empty filter
+      if(is.null(selection)){
+        
+        filter <- str_c(filter, ".")
+        
+      # otherwise add filters to the url
+      } else {
+        
+        selection <- str_c(selection, collapse = "+")
+        
+        filter <- str_c(filter, str_c(selection, "."))
+      }
+    }
+  }
   
-  # # testing of the whether the inputs are valid
-  # 
-  # # get the data structure
-  # 
-  # 
-  # # check if 
-  # if(is.null(filters)){
-  #   
-  # 
-  #   
-  # } else {
-  #   
-  #   
-  # }
+  filter <- str_c("/", filter)
+  
+  # add start and end dates
+  if(!is.na(start_date) & !is.na(end_date)){
+    
+    filter <- str_c(filter, "?startPeriod=", start_date, "&endPeriod=", end_date, "&")
+    
+  } else if (!is.na(start_date)){
+    
+    filter <- str_c(filter, "?startPeriod=", start_date, "&")
+    
+  } else if (!is.na(end_date)){
+    
+    filter <- str_c(filter, "?endPeriod=", end_date, "&")
+    
+  } else {
+    
+    filter <- str_c(filter, "?")
+  }
+  
+  # combine information on the filters into a single request
+  data_url <-
+    stringr::str_c(
+      "https://api.data.abs.gov.au/data/",
+      dataset_id,
+      filter,
+      "format=csv"
+    )
   
   return(data_url)
 }
@@ -494,14 +540,35 @@ get_url <- function(dataset_id, start_date, end_date, filters){
 #' @param level_type Select variable level return type from "codes", "labels" or "both". Default is "both".
 #' @param start_date Optional parameter, refines the search to only include data after the provided start date (to be implemented).
 #' @param end_date Optional parameter, refines the search to only include data before the provided end date (to be implemented).
-#' @param filters Additional filter for other dimensions of the data (to be implemented).
-#' @return A tibble with the data from the dataset. 
-#' @examples 
+#' @param filters Optional list of filters which can be applied to the data request. These should be provided in the form of a 
+#' named list of character vectors. Each list item should correspond to a dimension variable returned by get_codelist() (e.g. ) 
+#' and should be assigned a character vector of level id to filter the data. This filter is particularly useful 
+#' for reducing the size of large requests which cannot be handled by the ABS server (i.e. those which return ABS internal server error).
+#' @return A tibble with the requested data. 
+#' @examples
 #' # Return the dataset for the Apparent Consumption of Alcohol dataflow (dataset_id = "ALC")
 #' data <- get_data(dataset_id = "ALC");
 #' 
 #' # Include only variable names
 #' data_labelled <- get_data(dataset_id = "ALC", level_type = "labels");
+#' 
+#' 
+#' # Filter data
+#' 
+#' available_data <- get_codelist("ABS_REGIONAL_ASGS2016) # get available data to choose filters
+#' 
+#' test_filter <- list() # create an empty list of filters
+#' test_filter$CL_REGIONAL_MEASURE_2021 <- c("EMP_IND_2") # Employment in Agriculture ANZSIC 1
+#' test_filter$ <- c("102011029", "102011028") # SA2 regions from Gosford area
+#' 
+#' data_filtered <- 
+#'    get_data(
+#'      dataset_id = "ABS_REGIONAL_ASGS2016", 
+#'      filters = test_filter,
+#'      start_date = "2015",
+#'      end_date = "2020"
+#'    )
+#' 
 #' @export
 get_data <-
   function(
@@ -512,11 +579,23 @@ get_data <-
     filters = NULL
   ) {
     
+    # Check inputs
+    if(!is.na(start_date) & !is.na(end_date) & start_date > end_date){
+      
+      stop("Start date must be before end date!")
+    }
+    
+    # run request
     data <- httr::GET(url = get_url(dataset_id, start_date, end_date, filters))
     
+    # check status code
     if(data$status_code == 500){
       
-      stop("Internal ABS server error") 
+      stop("Internal ABS server error. Potential cause, the requested data may be too large, try adding a region or data item filter.") 
+      
+    } else if(data$status_code == 404){
+      
+      stop("No records found, please check your search query is correct and try again.") 
     }
     
     data <- readr::read_csv(httr::content(data))
@@ -545,7 +624,7 @@ get_data <-
           names_to = "var",
           values_to = "value"
         )
-
+      
       # add codes
       codes <- get_codelist(dataset_id, values = "levels")
       
@@ -596,4 +675,82 @@ get_data <-
     
     return(data)
   }
+
+
+
+# Testing -------------------------------------------------------------
+
+# available_data <- get_codelist("ABS_REGIONAL_ASGS2016") # get available data to choose filters
+# 
+# test_filter <- list() # create an empty list of filters
+# test_filter$CL_REGIONAL_MEASURE_2021 <- c("EMP_IND_2") # Employment in Agriculture ANZSIC 1
+# test_filter$CL_ASGS_2016 <- c("102011029", "102011028") # SA2 regions from Gosford area
+# 
+# data_filtered <-
+#    get_data(
+#      dataset_id = "ABS_REGIONAL_ASGS2016",
+#      filters = test_filter,
+#      start_date = "2015",
+#      end_date = "2020"
+#    )
+# 
+# # test of filtering version 2
+# available_data <- get_codelist("ALC") # get available data to choose filters
+# 
+# test_filter_v2 <- list()
+# test_filter_v2$CL_ALC_BEVT <- "1"
+# test_filter_v2$CL_ALC_MEASURE <- "1"
+# 
+# data_filtered_v2 <-
+#   get_data(
+#     dataset_id = "ALC",
+#     filters = test_filter_v2,
+#     start_date = "2005",
+#     end_date = "2020"
+#   )
+# 
+# # test simple request
+# selected_items <- c("EMP_IND_2", "EMP_IND_3")
+# selected_regions <- c("102011029", "102011028")
+# 
+# test_id <- "ABS_REGIONAL_ASGS2016"
+# 
+# test_start_date <- "2010"
+# 
+# test_end_date <- "2020"
+# 
+# test <- get_data(dataset_id = test_id,
+#                  start_date = test_start_date,
+#                  end_date = test_end_date,
+#                  data_items = selected_items,
+#                  regions = selected_regions)
+# 
+# 
+# # test incorrect start date (after end date)
+# test_start_date <- "2015"
+# 
+# test_end_date <- "2011"
+# 
+# test <- get_data(dataset_id = test_id,
+#                  start_date = test_start_date,
+#                  end_date = test_end_date,
+#                  data_items = selected_items,
+#                  regions = selected_regions)
+# 
+# 
+# # test incorrect regions
+# test_start_date <- "2015"
+# 
+# test_end_date <- "2020"
+# 
+# selected_regions <- c("102011029@", "102011028@")
+# 
+# test <- get_data(dataset_id = test_id,
+#                  start_date = test_start_date,
+#                  end_date = test_end_date,
+#                  data_items = selected_items,
+#                  regions = selected_regions)
+# 
+# # get codelist
+# codelist <- get_codelist(dataset_id = "ABS_REGIONAL_ASGS2016")
 
