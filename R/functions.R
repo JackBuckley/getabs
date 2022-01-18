@@ -463,6 +463,9 @@ get_codelist <- function(dataset_id, values = "levels"){
 # helper function to returns a valid ABS data API request url
 get_url <- function(dataset_id, start_date, end_date, filters){
   
+  # initialise the vector of filters
+  filter <- ""
+  
   # get the data structure to correctly order filters
   if(!is.null(filters)){
     
@@ -474,9 +477,7 @@ get_url <- function(dataset_id, start_date, end_date, filters){
       drop_na(position, local_id) %>% 
       select(position, local_id) %>% 
       arrange(position)
-    
-    # initialise the vector of filters
-    filter <- ""
+
     
     # for each dimension add the filter
     for(j in seq_along(structure$local_id)){
