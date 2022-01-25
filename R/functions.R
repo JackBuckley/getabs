@@ -543,7 +543,7 @@ get_url <- function(dataset_id, start_date, end_date, filters){
 #' @param end_date Optional parameter, refines the search to only include data before the provided end date (to be implemented).
 #' @param filters Optional list of filters which can be applied to the data request. These should be provided in the form of a 
 #' named list of character vectors. Each list item should correspond to a dimension variable returned by get_codelist() (e.g. ) 
-#' and should be assigned a character vector of level id to filter the data. This filter is particularly useful 
+#' and should be assigned a character vector of level ids to filter the data. This filter is particularly useful 
 #' for reducing the size of large requests which cannot be handled by the ABS server (i.e. those which return ABS internal server error).
 #' @return A tibble with the requested data. 
 #' @examples
